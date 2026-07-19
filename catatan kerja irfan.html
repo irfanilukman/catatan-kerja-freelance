@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#22303F">
+<title>Catatan Kerja</title>
+<style>
+  :root{
+    --paper:#FAF6ED; --paper-line:#E3DCC8; --ink:#22303F; --ink-soft:#5B6B78;
+    --gold:#8A6A1E; --gold-bg:#F1E6C6; --green:#1F6B4A; --green-bg:#DCEEE3;
+    --red:#A23B2E; --red-bg:#F6DFDA; --blue:#28527A; --blue-bg:#DCE7F2; --card:#FFFFFF;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    background:var(--paper); color:var(--ink); padding-bottom:96px;
+  }
+
+  .topbar{
+    position:sticky;top:0;z-index:5;background:var(--ink);color:#fff;
+    padding:calc(env(safe-area-inset-top) + 14px) 16px 12px;
+  }
+  .topbar h1{margin:0 0 10px;font-size:19px;font-weight:700;}
+  .month-row select{
+    width:100%;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);
+    border-radius:8px;padding:9px 10px;font-size:14px;font-family:inherit;
+  }
+  .month-row select option{color:#000;}
+
+  .summary-strip{display:flex;gap:8px;overflow-x:auto;padding:12px 16px 4px;scrollbar-width:none;}
+  .summary-strip::-webkit-scrollbar{display:none;}
+  .mini-stat{
+    flex:0 0 auto;min-width:118px;background:var(--card);border:1px solid var(--paper-line);
+    border-radius:10px;padding:10px 12px;
+  }
+  .mini-stat .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:3px;}
+  .mini-stat .val{font-size:16px;font-weight:700;color:var(--gold);}
+  .mini-stat.green .val{color:var(--green);}
+  .mini-stat.red .val{color:var(--red);}
+  .mini-stat.blue .val{color:var(--blue);}
+
+  select.status-select{
+    border:1px solid var(--paper-line);border-radius:20px;
+    font-weight:700;text-transform:uppercase;letter-spacing:.02em;
+    background:var(--red-bg);color:var(--red);cursor:pointer;
+  }
+  select.status-select.sudah{background:var(--green-bg);color:var(--green);}
+
+  .empty-hint{text-align:center;color:var(--ink-soft);font-size:13px;padding:30px 20px;}
+
+  /* ---- MOBILE: cards ---- */
+  #cardView{padding:8px 12px 0;}
+  .job-card{
+    background:var(--card);border:1px solid var(--paper-line);border-radius:14px;
+    padding:14px 14px 12px;margin-bottom:12px;
+  }
+  .job-card .row1{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;}
+  .job-card .no-badge{font-size:11px;color:var(--ink-soft);background:var(--paper);border-radius:6px;padding:3px 7px;}
+  .del-btn{border:none;background:transparent;color:var(--ink-soft);cursor:pointer;width:30px;height:30px;border-radius:8px;font-size:16px;}
+  .del-btn:active, .del-btn:hover{background:var(--red-bg);color:var(--red);}
+  label.field-label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin:8px 0 3px;}
+  label.field-label:first-of-type{margin-top:0;}
+  .job-card input.cell, .job-card textarea.cell, .job-card input.date-cell{
+    width:100%;border:1px solid var(--paper-line);border-radius:8px;padding:9px 10px;
+    font-size:15px;font-family:inherit;background:#FFFDF8;color:var(--ink);
+  }
+  .job-card textarea.cell{resize:none;min-height:40px;line-height:1.35;}
+  .job-card select.status-select{width:100%;padding:9px 10px;font-size:13px;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .fab{
+    position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom) + 18px);
+    width:56px;height:56px;border-radius:50%;background:var(--ink);color:#fff;
+    border:none;font-size:26px;line-height:56px;text-align:center;padding:0;
+    box-shadow:0 3px 10px rgba(0,0,0,.25);z-index:6;
+  }
+  .fab:active{background:#33465A;}
+
+  /* ---- DESKTOP: table ---- */
+  #tableView{display:none;padding:16px 20px 4px;max-width:1400px;margin:0 auto;}
+  .table-card{background:var(--card);border:1px solid var(--paper-line);border-radius:10px;padding:6px 6px 16px;}
+  table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;}
+  thead th{
+    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);
+    border-bottom:2px solid var(--ink);padding:8px 6px;background:var(--paper);position:sticky;top:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  th.col-no{width:3.5%;} th.col-tanggal{width:9%;} th.col-upah{width:10%;}
+  th.col-status{width:12%;} th.col-tanggungan{width:10%;} th.col-status-tanggungan{width:12%;} th.col-action{width:3.5%;}
+  tbody td{padding:4px 6px;border-bottom:1px solid var(--paper-line);vertical-align:middle;overflow:hidden;}
+  tbody tr:last-child td{border-bottom:none;}
+  .rownum{color:var(--ink-soft);font-size:12px;text-align:center;}
+  #tableView input.cell, #tableView textarea.cell{
+    width:100%;border:1px solid transparent;border-radius:5px;padding:6px 7px;
+    font-size:13px;font-family:inherit;background:transparent;color:var(--ink);
+  }
+  #tableView input.cell:hover, #tableView textarea.cell:hover{border-color:var(--paper-line);background:#FFFDF8;}
+  #tableView input.cell:focus, #tableView textarea.cell:focus{outline:none;border-color:#C7B77A;background:#FFFDF8;}
+  #tableView textarea.cell{resize:none;min-height:34px;line-height:1.3;word-break:break-word;}
+  #tableView input.upah-input{text-align:right;font-variant-numeric:tabular-nums;}
+  #tableView select.status-select{padding:5px 4px;font-size:10px;width:100%;}
+  .table-footer{display:flex;justify-content:flex-start;padding:10px 10px 0;}
+  .btn{
+    display:inline-block;border:1px solid var(--paper-line);border-radius:6px;padding:8px 16px;
+    font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--ink-soft);
+  }
+  .btn:hover{background:#F2EDDF;}
+  .fs-btn{
+    display:none;
+    border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;
+    border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;align-items:center;gap:6px;
+  }
+  .fs-btn:hover{background:rgba(255,255,255,.18);}
+
+  @media (min-width:701px){
+    #cardView{display:none;}
+    #tableView{display:block;}
+    .fab{display:none;}
+    .fs-btn{display:flex;}
+    .topbar{padding:20px 20px 14px;}
+    .topbar h1{font-size:22px;font-family:Georgia,'Times New Roman',serif;}
+    .month-row select{max-width:220px;}
+    .summary-strip{max-width:1400px;margin:0 auto;padding:16px 20px 0;}
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+      <h1 style="margin:0;">Catatan kerja</h1>
+      <button class="fs-btn" id="btnFullscreen"><i id="fsIcon">&#9974;</i><span id="fsLabel">Layar penuh</span></button>
+    </div>
+    <div class="month-row" style="margin-top:10px;"><select id="monthInput"></select></div>
+  </div>
+
+  <div class="summary-strip">
+    <div class="mini-stat"><div class="lbl">Total</div><div class="val" id="statTotal">Rp 0</div></div>
+    <div class="mini-stat green"><div class="lbl">Sudah dibayar</div><div class="val" id="statSudah">Rp 0</div></div>
+    <div class="mini-stat red"><div class="lbl">Belum dibayar</div><div class="val" id="statBelum">Rp 0</div></div>
+    <div class="mini-stat blue"><div class="lbl">Tanggungan</div><div class="val" id="statTanggungan">Rp 0</div></div>
+    <div class="mini-stat green"><div class="lbl">Pendapatan bersih</div><div class="val" id="statBersih">Rp 0</div></div>
+  </div>
+
+  <!-- MOBILE VIEW -->
+  <div id="cardView">
+    <div id="jobList"></div>
+    <div class="empty-hint" id="emptyHintMobile" style="display:none;">Belum ada catatan. Ketuk tombol + untuk menambah pekerjaan.</div>
+  </div>
+  <button class="fab" id="btnAddMobile" aria-label="Tambah pekerjaan">+</button>
+
+  <!-- DESKTOP VIEW -->
+  <div id="tableView">
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th class="col-no">No</th>
+            <th class="col-tanggal">Tanggal</th>
+            <th>Nama pekerjaan</th>
+            <th>Deskripsi</th>
+            <th class="col-upah">Upah (Rp)</th>
+            <th class="col-status">Status upah</th>
+            <th class="col-tanggungan">Tanggungan (Rp)</th>
+            <th class="col-status-tanggungan">Status tanggungan</th>
+            <th class="col-action"></th>
+          </tr>
+        </thead>
+        <tbody id="jobRows"></tbody>
+      </table>
+      <div class="table-footer"><button class="btn" id="btnAddDesktop">+ Tambah baris</button></div>
+    </div>
+  </div>
+
+<script>
+const ROW_COUNT_DEFAULT = 20;
+let currentMonth = '';
+let rows = [];
+let saveTimer = null;
+
+function idr(n){ return 'Rp ' + Math.round(n||0).toLocaleString('id-ID'); }
+function currentMonthKey(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function monthLabel(key){
+  const [y,m] = key.split('-');
+  const d = new Date(parseInt(y), parseInt(m)-1, 1);
+  return d.toLocaleDateString('id-ID', {month:'long', year:'numeric'});
+}
+function storageKey(monthKey){ return 'sheet:' + monthKey; }
+function emptyRow(){
+  return { tanggal:'', nama:'', deskripsi:'', upah:'', status:'belum', tanggungan:'', statusTanggungan:'belum' };
+}
+
+function populateMonthOptions(){
+  const sel = document.getElementById('monthInput');
+  const cur = currentMonthKey();
+  const keys = new Set([cur]);
+  for(let i=1;i<=11;i++){
+    const d = new Date(); d.setMonth(d.getMonth()-i);
+    keys.add(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'));
+  }
+  const sorted = Array.from(keys).sort().reverse();
+  const prev = sel.value || currentMonth || cur;
+  sel.innerHTML = '';
+  sorted.forEach(k => {
+    const opt = document.createElement('option');
+    opt.value = k; opt.textContent = monthLabel(k);
+    sel.appendChild(opt);
+  });
+  sel.value = sorted.includes(prev) ? prev : cur;
+}
+
+async function loadMonth(monthKey){
+  try{
+    const res = await window.storage.get(storageKey(monthKey), false);
+    rows = res ? JSON.parse(res.value) : null;
+  }catch(e){ rows = null; }
+  if(!rows || !rows.length){
+    rows = Array.from({length: ROW_COUNT_DEFAULT}, emptyRow);
+  }
+  rows = rows.map(r => Object.assign(emptyRow(), r));
+  currentMonth = monthKey;
+  renderAll();
+  updateSummary();
+}
+
+function queueSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try{ await window.storage.set(storageKey(currentMonth), JSON.stringify(rows), false); }
+    catch(e){ console.error('Gagal menyimpan', e); }
+  }, 300);
+}
+
+function isMobile(){ return window.matchMedia('(max-width: 700px)').matches; }
+
+function renderAll(){
+  if(isMobile()) renderCards(); else renderTable();
+}
+
+function renderCards(){
+  const list = document.getElementById('jobList');
+  const emptyHint = document.getElementById('emptyHintMobile');
+  list.innerHTML = '';
+  emptyHint.style.display = rows.length ? 'none' : 'block';
+
+  rows.forEach((r, i) => {
+    const card = document.createElement('div');
+    card.className = 'job-card';
+
+    const row1 = document.createElement('div'); row1.className = 'row1';
+    const noBadge = document.createElement('span'); noBadge.className = 'no-badge'; noBadge.textContent = 'Job ' + (i+1);
+    const delBtn = document.createElement('button'); delBtn.className = 'del-btn'; delBtn.textContent = '\u00d7';
+    delBtn.setAttribute('aria-label','Hapus');
+    delBtn.onclick = () => { rows.splice(i,1); queueSave(); renderCards(); updateSummary(); };
+    row1.append(noBadge, delBtn); card.appendChild(row1);
+
+    const lblTgl = document.createElement('label'); lblTgl.className = 'field-label'; lblTgl.textContent = 'Tanggal';
+    const inTgl = document.createElement('input'); inTgl.className = 'date-cell'; inTgl.type = 'date'; inTgl.value = r.tanggal;
+    inTgl.oninput = e => { r.tanggal = e.target.value; queueSave(); };
+
+    const lblNama = document.createElement('label'); lblNama.className = 'field-label'; lblNama.textContent = 'Nama pekerjaan';
+    const inNama = document.createElement('input'); inNama.className = 'cell'; inNama.placeholder = 'Contoh: Servis AC'; inNama.value = r.nama;
+    inNama.oninput = e => { r.nama = e.target.value; queueSave(); };
+
+    const lblDesk = document.createElement('label'); lblDesk.className = 'field-label'; lblDesk.textContent = 'Deskripsi';
+    const inDesk = document.createElement('textarea'); inDesk.className = 'cell'; inDesk.rows = 1; inDesk.placeholder = 'Detail singkat'; inDesk.value = r.deskripsi;
+    inDesk.oninput = e => { r.deskripsi = e.target.value; queueSave(); };
+
+    const two1 = document.createElement('div'); two1.className = 'two-col';
+    const upahWrap = document.createElement('div');
+    const lblUpah = document.createElement('label'); lblUpah.className = 'field-label'; lblUpah.textContent = 'Upah (Rp)';
+    const inUpah = document.createElement('input'); inUpah.className = 'cell'; inUpah.type = 'number'; inUpah.min = '0'; inUpah.placeholder = '0'; inUpah.value = r.upah;
+    inUpah.oninput = e => { r.upah = e.target.value; queueSave(); updateSummary(); };
+    upahWrap.append(lblUpah, inUpah);
+
+    const statusWrap = document.createElement('div');
+    const lblStatus = document.createElement('label'); lblStatus.className = 'field-label'; lblStatus.textContent = 'Status upah';
+    const sel = document.createElement('select');
+    sel.className = 'status-select' + (r.status === 'sudah' ? ' sudah' : '');
+    sel.innerHTML = '<option value="belum">Belum dibayar</option><option value="sudah">Sudah dibayar</option>';
+    sel.value = r.status;
+    sel.onchange = e => { r.status = e.target.value; sel.className = 'status-select' + (r.status==='sudah'?' sudah':''); queueSave(); updateSummary(); };
+    statusWrap.append(lblStatus, sel);
+    two1.append(upahWrap, statusWrap);
+
+    const two2 = document.createElement('div'); two2.className = 'two-col';
+    const tanggunganWrap = document.createElement('div');
+    const lblTanggungan = document.createElement('label'); lblTanggungan.className = 'field-label'; lblTanggungan.textContent = 'Tanggungan (Rp)';
+    const inTanggungan = document.createElement('input'); inTanggungan.className = 'cell'; inTanggungan.type = 'number'; inTanggungan.min = '0'; inTanggungan.placeholder = '-'; inTanggungan.value = r.tanggungan;
+    tanggunganWrap.append(lblTanggungan, inTanggungan);
+
+    const statusTWrap = document.createElement('div');
+    const lblStatusT = document.createElement('label'); lblStatusT.className = 'field-label'; lblStatusT.textContent = 'Status tanggungan';
+    const selT = document.createElement('select');
+    const hasTanggungan = Number(r.tanggungan) > 0;
+    selT.className = 'status-select' + (r.statusTanggungan === 'sudah' ? ' sudah' : '');
+    selT.innerHTML = '<option value="belum">Belum dibayar</option><option value="sudah">Sudah dibayar</option>';
+    selT.value = r.statusTanggungan; selT.disabled = !hasTanggungan; selT.style.opacity = hasTanggungan ? '1' : '0.4';
+    selT.onchange = e => { r.statusTanggungan = e.target.value; selT.className = 'status-select' + (r.statusTanggungan==='sudah'?' sudah':''); queueSave(); updateSummary(); };
+    statusTWrap.append(lblStatusT, selT);
+
+    inTanggungan.oninput = e => {
+      r.tanggungan = e.target.value;
+      const has = Number(r.tanggungan) > 0;
+      selT.disabled = !has; selT.style.opacity = has ? '1' : '0.4';
+      queueSave(); updateSummary();
+    };
+    two2.append(tanggunganWrap, statusTWrap);
+
+    card.append(lblTgl, inTgl, lblNama, inNama, lblDesk, inDesk, two1, two2);
+    list.appendChild(card);
+  });
+}
+
+function renderTable(){
+  const tbody = document.getElementById('jobRows');
+  tbody.innerHTML = '';
+  rows.forEach((r, i) => {
+    const tr = document.createElement('tr');
+
+    const tdNo = document.createElement('td'); tdNo.className = 'rownum'; tdNo.textContent = i+1;
+
+    const tdTanggal = document.createElement('td');
+    const inTanggal = document.createElement('input'); inTanggal.className = 'cell'; inTanggal.type = 'date'; inTanggal.value = r.tanggal;
+    inTanggal.oninput = e => { r.tanggal = e.target.value; queueSave(); };
+    tdTanggal.appendChild(inTanggal);
+
+    const tdNama = document.createElement('td');
+    const inNama = document.createElement('input'); inNama.className = 'cell'; inNama.placeholder = 'Nama pekerjaan'; inNama.value = r.nama;
+    inNama.oninput = e => { r.nama = e.target.value; queueSave(); };
+    tdNama.appendChild(inNama);
+
+    const tdDesk = document.createElement('td');
+    const inDesk = document.createElement('textarea'); inDesk.className = 'cell'; inDesk.placeholder = 'Deskripsi singkat'; inDesk.rows = 1; inDesk.value = r.deskripsi;
+    inDesk.oninput = e => { r.deskripsi = e.target.value; queueSave(); };
+    tdDesk.appendChild(inDesk);
+
+    const tdUpah = document.createElement('td');
+    const inUpah = document.createElement('input'); inUpah.className = 'cell upah-input'; inUpah.type = 'number'; inUpah.min = '0'; inUpah.placeholder = '0'; inUpah.value = r.upah;
+    inUpah.oninput = e => { r.upah = e.target.value; queueSave(); updateSummary(); };
+    tdUpah.appendChild(inUpah);
+
+    const tdStatus = document.createElement('td');
+    const sel = document.createElement('select');
+    sel.className = 'status-select' + (r.status === 'sudah' ? ' sudah' : '');
+    sel.innerHTML = '<option value="belum">Belum dibayar</option><option value="sudah">Sudah dibayar</option>';
+    sel.value = r.status;
+    sel.onchange = e => { r.status = e.target.value; sel.className = 'status-select' + (r.status==='sudah'?' sudah':''); queueSave(); updateSummary(); };
+    tdStatus.appendChild(sel);
+
+    const tdTanggungan = document.createElement('td');
+    const inTanggungan = document.createElement('input'); inTanggungan.className = 'cell upah-input'; inTanggungan.type = 'number'; inTanggungan.min = '0'; inTanggungan.placeholder = '-'; inTanggungan.value = r.tanggungan;
+    tdTanggungan.appendChild(inTanggungan);
+
+    const tdStatusTanggungan = document.createElement('td');
+    const hasTanggungan = Number(r.tanggungan) > 0;
+    const selT = document.createElement('select');
+    selT.className = 'status-select' + (r.statusTanggungan === 'sudah' ? ' sudah' : '');
+    selT.innerHTML = '<option value="belum">Belum dibayar</option><option value="sudah">Sudah dibayar</option>';
+    selT.value = r.statusTanggungan; selT.disabled = !hasTanggungan; if(!hasTanggungan) selT.style.opacity = '0.4';
+    selT.onchange = e => { r.statusTanggungan = e.target.value; selT.className = 'status-select' + (r.statusTanggungan==='sudah'?' sudah':''); queueSave(); updateSummary(); };
+    tdStatusTanggungan.appendChild(selT);
+
+    inTanggungan.oninput = e => {
+      r.tanggungan = e.target.value;
+      const has = Number(r.tanggungan) > 0;
+      selT.disabled = !has; selT.style.opacity = has ? '1' : '0.4';
+      queueSave(); updateSummary();
+    };
+
+    const tdAction = document.createElement('td');
+    const delBtn = document.createElement('button'); delBtn.className = 'del-btn'; delBtn.textContent = '\u00d7'; delBtn.title = 'Hapus baris';
+    delBtn.onclick = () => { rows.splice(i, 1); queueSave(); renderTable(); updateSummary(); };
+    tdAction.appendChild(delBtn);
+
+    tr.append(tdNo, tdTanggal, tdNama, tdDesk, tdUpah, tdStatus, tdTanggungan, tdStatusTanggungan, tdAction);
+    tbody.appendChild(tr);
+  });
+}
+
+function updateSummary(){
+  const total = rows.reduce((s,r) => s + (Number(r.upah)||0), 0);
+  const sudah = rows.filter(r => r.status === 'sudah').reduce((s,r) => s + (Number(r.upah)||0), 0);
+  const belum = total - sudah;
+  const tanggungan = rows.reduce((s,r) => s + (Number(r.tanggungan)||0), 0);
+  const bersih = total - tanggungan;
+  document.getElementById('statTotal').textContent = idr(total);
+  document.getElementById('statSudah').textContent = idr(sudah);
+  document.getElementById('statBelum').textContent = idr(belum);
+  document.getElementById('statTanggungan').textContent = idr(tanggungan);
+  document.getElementById('statBersih').textContent = idr(bersih);
+}
+
+document.getElementById('btnAddMobile').onclick = () => {
+  rows.push(emptyRow()); queueSave(); renderCards(); updateSummary();
+  window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'});
+};
+document.getElementById('btnAddDesktop').onclick = () => {
+  rows.push(emptyRow()); queueSave(); renderTable();
+};
+
+document.getElementById('monthInput').addEventListener('change', async (e) => { await loadMonth(e.target.value); });
+
+const btnFs = document.getElementById('btnFullscreen');
+const fsLabel = document.getElementById('fsLabel');
+function updateFsLabel(){
+  fsLabel.textContent = document.fullscreenElement ? 'Keluar layar penuh' : 'Layar penuh';
+}
+btnFs.onclick = () => {
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+};
+document.addEventListener('fullscreenchange', updateFsLabel);
+
+let lastIsMobile = null;
+window.matchMedia('(max-width: 700px)').addEventListener('change', () => {
+  const m = isMobile();
+  if(m !== lastIsMobile){ lastIsMobile = m; renderAll(); }
+});
+
+(async () => {
+  lastIsMobile = isMobile();
+  populateMonthOptions();
+  await loadMonth(document.getElementById('monthInput').value);
+})();
+</script>
+</body>
+</html>
